@@ -13,6 +13,40 @@ plt.set_cmap('gray')
 IMG_DTYPE = np.float
 SEG_DTYPE = np.uint8
 
+
+def load_liver_seg_dataset(data_path):
+    """
+    load the liver dataset
+    :param data_path:
+    :return: list of 3D CT data (variable height) & list of 3D binary segmentation data
+    """
+
+    # get list of subfolder names
+    dir_list = os.listdir(data_path)
+    dir_list = sorted(dir_list)
+
+    # empty list for appending data for each subject
+    list_ct = []
+    list_mask = []
+
+    # traverse through subfolders
+    # each subfolder contains one raw seg file, and another subfolder 'P' containing slices of dicom files
+    for dir_name in dir_list:
+        # obtain absolute path of the subject
+        path_subject = os.path.join(data_path, dir_name)
+        # load dicom image of the subject
+        dicom_image = read_dicom_series(os.path.join(path_subject, 'P'), "P_*")
+        # load mask image of the subject, which needs shape information
+        dicom_shape = dicom_image.shape
+        mask_path = os.path.join(path_subject, str(dir_name)+'.raw')
+        mask_image = read_liver_seg_masks_raw(mask_path, img_shape=dicom_shape)
+        # append to list
+        list_ct.append(dicom_image)
+        list_mask.append(mask_image)
+
+    return list_ct, list_mask
+
+
 def read_dicom_series(directory, filepattern="P_*"):
     """ Reads a DICOM Series files in the given directory.
     Only filesnames matching filepattern will be considered"""
@@ -46,7 +80,7 @@ def read_liver_seg_masks_raw(masks_dirname, img_shape):
     :return:
     """
     label_volume = None
-    rawfile = np.fromfile(masks_dirname+'Test1.raw', dtype='uint8', sep="")
+    rawfile = np.fromfile(masks_dirname, dtype='uint8', sep="")
 
     # raw file assumes height as first dimension
     # permute img_shape and reshape the raw image
