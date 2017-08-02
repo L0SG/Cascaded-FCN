@@ -20,7 +20,9 @@ caffe.set_mode_gpu()
 # Load network
 net1 = caffe.Net(STEP1_DEPLOY_PROTOTXT, STEP1_MODEL_WEIGHTS, caffe.TEST)
 
-img_list, lbl_list = utils.load_liver_seg_dataset(data_path='/home/tkdrlf9202/Datasets/liver')
+# load dataset
+# if full load the data, specify None to num_data_to_load
+img_list, lbl_list = utils.load_liver_seg_dataset(data_path='/home/tkdrlf9202/Datasets/liver', num_data_to_load=None)
 
 """
 # load the dicom and mask
@@ -57,16 +59,20 @@ for idx in range(len(img_list)):
     pred = np.array(pred).transpose(1, 2, 0)
 
     # create volume instance from medpy
-    v = volume(lbl_p, pred)
-    # calculate metrics
+    v = volume.Volume(pred, lbl_p)
+    # calculate metrics as in the oritinal paper
     voe = v.get_volumetric_overlap_error()
     rvd = v.get_relative_volume_difference()
-    asd = metric.asd(lbl_p, pred)
-    msd = metric.hd(lbl_p, pred)
-    dice = metric.dc(lbl_p, pred)
+    asd = metric.asd(pred, lbl_p)
+    msd = metric.hd(pred, lbl_p)
+    dice = metric.dc(pred, lbl_p) * 100 # convert to percentage
 
     perf_metrics.append([voe, rvd, asd, msd, dice])
 
+perf_metrics = np.array(perf_metrics)
+perf_metrics_mean = np.mean(perf_metrics, axis=0)
+
+print(perf_metrics_mean)
 
 
 """

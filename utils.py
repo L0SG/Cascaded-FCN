@@ -14,7 +14,7 @@ IMG_DTYPE = np.float
 SEG_DTYPE = np.uint8
 
 
-def load_liver_seg_dataset(data_path):
+def load_liver_seg_dataset(data_path, num_data_to_load):
     """
     load the liver dataset
     :param data_path:
@@ -31,6 +31,7 @@ def load_liver_seg_dataset(data_path):
 
     # traverse through subfolders
     # each subfolder contains one raw seg file, and another subfolder 'P' containing slices of dicom files
+    count_for_early_stop = 0
     for dir_name in dir_list:
         # obtain absolute path of the subject
         path_subject = os.path.join(data_path, dir_name)
@@ -43,7 +44,11 @@ def load_liver_seg_dataset(data_path):
         # append to list
         list_ct.append(dicom_image)
         list_mask.append(mask_image)
-
+        count_for_early_stop += 1
+        if num_data_to_load is None:
+            continue
+        if count_for_early_stop == num_data_to_load:
+            break
     return list_ct, list_mask
 
 
