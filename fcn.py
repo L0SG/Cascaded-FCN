@@ -1,45 +1,38 @@
-# model prototxt and weights location
-STEP1_DEPLOY_PROTOTXT = "models/cascadedfcn/step1/step1_deploy.prototxt"
-STEP1_MODEL_WEIGHTS   = "models/cascadedfcn/step1/step1_weights.caffemodel"
-STEP2_DEPLOY_PROTOTXT = "models/cascadedfcn/step2/step2_deploy.prototxt"
-STEP2_MODEL_WEIGHTS   = "models/cascadedfcn/step2/step2_weights.caffemodel"
+
 
 import numpy as np
 import medpy.metric._volume as volume
 import medpy.metric as metric
 import utils
 import sys
-sys.path.append('/home/tkdrlf9202/caffe-jonlong/python')
-import caffe
+import os
+
+# force load custom caffe
+sys.path.insert(0, '/home/vision/tkdrlf9202/caffe-jonlong/python')
+import caffe as caffe
 # verify that the model uses custom caffe
 print caffe.__file__
 
 # Use GPU for inference: if one wants to use cpu, caffe.set_mode_cpu()
 caffe.set_mode_gpu()
 
+# model prototxt and weights location
+STEP1_DEPLOY_PROTOTXT = "models/cascadedfcn/step1/step1_deploy.prototxt"
+STEP1_MODEL_WEIGHTS   = "models/cascadedfcn/step1/step1_weights.caffemodel"
+STEP2_DEPLOY_PROTOTXT = "models/cascadedfcn/step2/step2_deploy.prototxt"
+STEP2_MODEL_WEIGHTS   = "models/cascadedfcn/step2/step2_weights.caffemodel"
+
 # Load network
 net1 = caffe.Net(STEP1_DEPLOY_PROTOTXT, STEP1_MODEL_WEIGHTS, caffe.TEST)
 
 # load dataset
 # if full load the data, specify None to num_data_to_load
-img_list, lbl_list = utils.load_liver_seg_dataset(data_path='/home/tkdrlf9202/Datasets/liver', num_data_to_load=None)
-
-"""
-# load the dicom and mask
-img = utils.read_dicom_series("/home/tkdrlf9202/Datasets/liver_segmentation/dicom_sample/", filepattern="P_*")
-lbl = utils.read_liver_seg_masks_raw("/home/tkdrlf9202/Datasets/liver_segmentation/seg_sample/", img.shape)
-# since our data has range of 0~2048 (instead of -1024~1024) subtract 1024
-img = np.add(img, -1024)
-
-# load routine for ref. dataset
-img = utils.read_dicom_series("/home/tkdrlf9202/PycharmProjects/Cascaded-FCN/test_image/3Dircadb1.17/PATIENT_DICOM", filepattern="image_*")
-lbl = utils.read_liver_lesion_masks("/home/tkdrlf9202/PycharmProjects/Cascaded-FCN/test_image/3Dircadb1.17/MASKS_DICOM")
-"""
+img_list, lbl_list = utils.load_liver_seg_dataset(data_path='/home/vision/tkdrlf9202/Datasets/liver', num_data_to_load=None)
 
 perf_metrics = []
-for idx in range(len(img_list)):
-    img = img_list[idx]
-    lbl = lbl_list[idx]
+for idx_subject in range(len(img_list)):
+    img = img_list[idx_subject]
+    lbl = lbl_list[idx_subject]
     # since our data has range of 0~2048 (instead of -1024~1024) subtract 1024
     img = np.add(img, -1024)
 
@@ -68,10 +61,12 @@ for idx in range(len(img_list)):
     dice = metric.dc(pred, lbl_p) * 100 # convert to percentage
 
     perf_metrics.append([voe, rvd, asd, msd, dice])
+    print('subject %d: %s' % (idx_subject, str([voe, rvd, asd, msd, dice])))
 
 perf_metrics = np.array(perf_metrics)
 perf_metrics_mean = np.mean(perf_metrics, axis=0)
 
+print('inference complete: mean of performance metrics')
 print(perf_metrics_mean)
 
 
